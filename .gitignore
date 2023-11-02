@@ -6,3 +6,11 @@ datasets
 *.log
 *.pt
 *.zip
+*.pkl
+*.npy
+**.pt
+code/experiments_logs/*
+
+
+code/experiments_logs/SleepEEG_2_Epilepsy/run1/pre_train_seed_42_2layertransformer/saved_models/ckp_last.pt
+

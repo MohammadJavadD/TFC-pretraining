@@ -4,7 +4,7 @@ import os
 import pickle
 
 alias_lst = ['sleepEDF', 'epilepsy', 'pFD_A', 'pFD_B', 'HAR', 'AHAR', 'physionet2017', 'emg']
-dirname_lst = ['SleepEEG', 'Epilepsy', 'FD-A', 'FD-B', 'HAR', 'Gesture', 'ecg', 'emg']
+dirname_lst = ['SleepEEG', 'Epilepsy', 'FD-A', 'FD-B', 'HAR', 'Gesture', 'ECG', 'EMG']
 trial_lst = ['contrastive_ms', 'contrastive_ss', 'contrastive_ms', 'contrastive_ss', 'contrastive_ms', 'contrastive_ss', 'contrastive_ms', 'contrastive_ss']
 phase_lst = ['train','val','test']
 modality_lst = ['eeg', 'eeg', 'other', 'other', 'other', 'other', 'ecg', 'emg']
@@ -13,9 +13,9 @@ term = 'All Terms'
 desired_leads = ['I']
 
 for alias, dirname, trial, modality in zip(alias_lst, dirname_lst, trial_lst, modality_lst):
-    train_dict = torch.load(os.path.join('datasets', dirname, 'train.pt'))
-    val_dict = torch.load(os.path.join('datasets', dirname, 'val.pt'))
-    test_dict = torch.load(os.path.join('datasets', dirname, 'test.pt'))
+    train_dict = torch.load(os.path.join(os.path.expanduser('~/scratch/medical/datasets'), dirname, 'train.pt'))
+    val_dict = torch.load(os.path.join(os.path.expanduser('~/scratch/medical/datasets'), dirname, 'val.pt'))
+    test_dict = torch.load(os.path.join(os.path.expanduser('~/scratch/medical/datasets'), dirname, 'test.pt'))
 
     input_dict = {}
     output_dict = {}

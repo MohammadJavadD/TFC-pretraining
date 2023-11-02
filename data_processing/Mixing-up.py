@@ -2,12 +2,12 @@ import torch
 import numpy as np
 import os
 
-dataset_lst = ['SleepEEG', 'Epilepsy', 'FD-A', 'FD-B', 'HAR', 'Gesture', 'ecg', 'emg']
+dataset_lst = ['SleepEEG', 'Epilepsy', 'FD-A', 'FD-B', 'HAR', 'Gesture', 'ECG', 'EMG']
 
 for dataset_name in dataset_lst:
-    train_dict = torch.load(os.path.join('datasets', dataset_name, 'train.pt'))
-    val_dict = torch.load(os.path.join('datasets', dataset_name, 'val.pt'))
-    test_dict = torch.load(os.path.join('datasets', dataset_name, 'test.pt'))
+    train_dict = torch.load(os.path.join(os.path.expanduser('~/scratch/medical/datasets'), dataset_name, 'train.pt'))
+    val_dict = torch.load(os.path.join(os.path.expanduser('~/scratch/medical/datasets'), dataset_name, 'val.pt'))
+    test_dict = torch.load(os.path.join(os.path.expanduser('~/scratch/medical/datasets'), dataset_name, 'test.pt'))
 
     train_input = train_dict['samples']
     test_input = test_dict['samples']
