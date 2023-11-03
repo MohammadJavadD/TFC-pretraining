@@ -15,7 +15,7 @@ def one_hot_encoding(X):
     return b
 
 def Trainer(model,  model_optimizer, classifier, classifier_optimizer, train_dl, valid_dl, test_dl, device,
-            logger, config, experiment_log_dir, training_mode):
+            logger,wandb_run, config, experiment_log_dir, training_mode):
     # Start training
     logger.debug("Training started ....")
 
@@ -27,7 +27,9 @@ def Trainer(model,  model_optimizer, classifier, classifier_optimizer, train_dl,
             # Train and validate
             """Train. In fine-tuning, this part is also trained???"""
             train_loss = model_pretrain(model, model_optimizer, criterion, train_dl, config, device, training_mode)
-            logger.debug(f'\nPre-training Epoch : {epoch}', f'Train Loss : {train_loss:.4f}')
+            # logger.debug(f'\nPre-training Epoch : {epoch}', f'Train Loss : {train_loss:.4f}')
+            print(f'\nPre-training Epoch : {epoch}', f'Train Loss : {train_loss:.4f}')
+            wandb_run.log({"Epoch" : epoch, "Train Loss" : train_loss})
 
         os.makedirs(os.path.join(experiment_log_dir, "saved_models"), exist_ok=True)
         chkpoint = {'model_state_dict': model.state_dict()}
@@ -46,7 +48,7 @@ def Trainer(model,  model_optimizer, classifier, classifier_optimizer, train_dl,
         for epoch in range(1, config.num_epoch + 1):
             logger.debug(f'\nEpoch : {epoch}')
 
-            valid_loss, emb_finetune, label_finetune, F1 = model_finetune(model, model_optimizer, valid_dl, config,
+            valid_loss, emb_finetune, label_finetune, F1 = model_finetune(model, model_optimizer, valid_dl, config, wandb_run,
                                   device, training_mode, classifier=classifier, classifier_optimizer=classifier_optimizer)
             scheduler.step(valid_loss)
 
@@ -66,7 +68,7 @@ def Trainer(model,  model_optimizer, classifier, classifier_optimizer, train_dl,
             logger.debug('Test on Target datasts test set')
             model.load_state_dict(torch.load('experiments_logs/finetunemodel/' + arch + '_model.pt'))
             classifier.load_state_dict(torch.load('experiments_logs/finetunemodel/' + arch + '_classifier.pt'))
-            test_loss, test_acc, test_auc, test_prc, emb_test, label_test, performance = model_test(model, test_dl, config, device, training_mode,
+            test_loss, test_acc, test_auc, test_prc, emb_test, label_test, performance = model_test(model, test_dl, config, wandb_run, device, training_mode,
                                                              classifier=classifier, classifier_optimizer=classifier_optimizer)
             performance_list.append(performance)
 
@@ -100,6 +102,7 @@ def Trainer(model,  model_optimizer, classifier, classifier_optimizer, train_dl,
               '| AUPRC=%.4f' % (best_performance[0], best_performance[1], best_performance[2], best_performance[3],
                                 best_performance[4], best_performance[5]))
         print('Best KNN F1', max(KNN_f1))
+        wandb_run.log({"Best Testing Performance": best_performance[0], "Best KNN F1": max(KNN_f1)})
 
     logger.debug("\n################## Training is Done! #########################")
 
@@ -146,7 +149,7 @@ def model_pretrain(model, model_optimizer, criterion, train_loader, config, devi
     return ave_loss
 
 
-def model_finetune(model, model_optimizer, val_dl, config, device, training_mode, classifier=None, classifier_optimizer=None):
+def model_finetune(model, model_optimizer, val_dl, config, wandb_run, device, training_mode, classifier=None, classifier_optimizer=None):
     global labels, pred_numpy, fea_concat_flat
     model.train()
     classifier.train()
@@ -196,7 +199,7 @@ def model_finetune(model, model_optimizer, val_dl, config, device, training_mode
         loss = loss_p + l_TF + lam*(loss_t + loss_f)
 
         acc_bs = labels.eq(predictions.detach().argmax(dim=1)).float().mean()
-        onehot_label = F.one_hot(labels)
+        onehot_label = F.one_hot(labels,num_classes=config.num_classes_target)
         pred_numpy = predictions.detach().cpu().numpy()
 
         try:
@@ -233,11 +236,11 @@ def model_finetune(model, model_optimizer, val_dl, config, device, training_mode
 
     print(' Finetune: loss = %.4f| Acc=%.4f | Precision = %.4f | Recall = %.4f | F1 = %.4f| AUROC=%.4f | AUPRC = %.4f'
           % (ave_loss, ave_acc*100, precision * 100, recall * 100, F1 * 100, ave_auc * 100, ave_prc *100))
-
+    wandb_run.log({"Finetune Loss": ave_loss, "Finetune Acc": ave_acc, "Finetune Precision": precision})
     return ave_loss, feas, trgs, F1
 
 
-def model_test(model,  test_dl, config,  device, training_mode, classifier=None, classifier_optimizer=None):
+def model_test(model,  test_dl, config, wandb_run,  device, training_mode, classifier=None, classifier_optimizer=None):
     model.eval()
     classifier.eval()
 
@@ -305,5 +308,7 @@ def model_test(model,  test_dl, config,  device, training_mode, classifier=None,
     performance = [acc * 100, precision * 100, recall * 100, F1 * 100, total_auc * 100, total_prc * 100]
     print('MLP Testing: Acc=%.4f| Precision = %.4f | Recall = %.4f | F1 = %.4f | AUROC= %.4f | AUPRC=%.4f'
           % (acc*100, precision * 100, recall * 100, F1 * 100, total_auc*100, total_prc*100))
+    wandb_run.log({"MLP Testing Acc": acc, "MLP Testing Precision": precision, "MLP Testing Recall": recall,
+                   "MLP Testing F1": F1, "MLP Testing AUROC": total_auc, "MLP Testing AUPRC": total_prc})
     emb_test_all = torch.concat(tuple(emb_test_all))
     return total_loss, total_acc, total_auc, total_prc, emb_test_all, trgs, performance

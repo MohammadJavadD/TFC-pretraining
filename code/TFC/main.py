@@ -9,6 +9,10 @@ from model import *
 from dataloader import data_generator
 from trainer import Trainer
 
+# import warnings filter
+from warnings import simplefilter
+# ignore all future warnings
+simplefilter(action='ignore', category=FutureWarning)
 
 
 
@@ -36,6 +40,8 @@ parser.add_argument('--device', default='cuda', type=str,
                     help='cpu or cuda')
 parser.add_argument('--home_path', default=home_dir, type=str,
                     help='Project home directory')
+parser.add_argument( "--project_name", default="TF-C" ,type=str, help="project name")
+parser.add_argument( "--task_name", default="TF-C" ,type=str, help="task name")
 args, unknown = parser.parse_known_args()
 
 with_gpu = torch.cuda.is_available()
@@ -44,6 +50,8 @@ if with_gpu:
 else:
     device = torch.device("cpu")
 print('We are using %s now.' %device)
+
+
 
 pretrain_dataset = args.pretrain_dataset
 targetdata = args.target_dataset
@@ -58,6 +66,15 @@ os.makedirs(logs_save_dir, exist_ok=True)
 exec(f'from config_files.{pretrain_dataset}_Configs import Config as Configs')
 configs = Configs()
 
+## wandb
+import wandb
+wandb_run = wandb.init(
+    project=args.project_name,
+    name=args.task_name,
+        config= vars(args),
+    )
+wandb_run.config.update(configs.__dict__)
+## end wandb
 # # ##### fix random seeds for reproducibility ########
 SEED = args.seed
 torch.manual_seed(SEED)
@@ -89,7 +106,7 @@ logger.debug("=" * 45)
 # Load datasets
 sourcedata_path = f"~/scratch/medical/datasets/{pretrain_dataset}"
 targetdata_path = f"~/scratch/medical/datasets/{targetdata}"
-subset = True  # if subset= true, use a subset for debugging.
+subset = False  # if subset= true, use a subset for debugging.
 train_dl, valid_dl, test_dl = data_generator(os.path.expanduser(sourcedata_path), os.path.expanduser(targetdata_path), configs, training_mode, subset = subset)
 logger.debug("Data loaded ...")
 
@@ -114,6 +131,6 @@ classifier_optimizer = torch.optim.Adam(classifier.parameters(), lr=configs.lr, 
 
 # Trainer
 Trainer(TFC_model, model_optimizer, classifier, classifier_optimizer, train_dl, valid_dl, test_dl, device,
-        logger, configs, experiment_log_dir, training_mode)
+        logger, wandb_run, configs, experiment_log_dir, training_mode)
 
 logger.debug(f"Training time is : {datetime.now()-start_time}")

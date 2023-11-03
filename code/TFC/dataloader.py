@@ -5,6 +5,8 @@ import os
 import numpy as np
 from augmentations import DataTransform_FD, DataTransform_TD
 import torch.fft as fft
+from torchsampler import ImbalancedDatasetSampler
+
 
 def generate_freq(dataset, config):
     X_train = dataset["samples"]
@@ -101,6 +103,8 @@ def data_generator(sourcedata_path, targetdata_path, configs, training_mode, sub
     train_dataset = torch.load(os.path.join(sourcedata_path, "train.pt"))
     finetune_dataset = torch.load(os.path.join(targetdata_path, "train.pt"))  # train.pt
     test_dataset = torch.load(os.path.join(targetdata_path, "test.pt"))  # test.pt
+    train_dataset_org = train_dataset
+
     """In pre-training: 
     train_dataset: [371055, 1, 178] from SleepEEG.    
     finetune_dataset: [60, 1, 178], test_dataset: [11420, 1, 178] from Epilepsy"""
@@ -112,8 +116,11 @@ def data_generator(sourcedata_path, targetdata_path, configs, training_mode, sub
                                 target_dataset_size=configs.target_batch_size, subset=False)
 
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=configs.batch_size,
-                                               shuffle=True, drop_last=configs.drop_last,
-                                               num_workers=0)
+                                               drop_last=configs.drop_last,
+                                               num_workers=0,
+                                            #    sampler = ImbalancedDatasetSampler(train_dataset, labels=train_dataset_org["labels"]),
+                                               shuffle=True
+                                               )
     finetune_loader = torch.utils.data.DataLoader(dataset=finetune_dataset, batch_size=configs.target_batch_size,
                                                shuffle=True, drop_last=configs.drop_last,
                                                num_workers=0)
